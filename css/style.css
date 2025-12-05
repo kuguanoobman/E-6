@@ -1,0 +1,246 @@
+/* 全局重置与基础样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    touch-action: none;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background-color: #f5f5f7;
+}
+
+/* 横屏提示 */
+.landscape-tip {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #1d1d1f;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    text-align: center;
+    padding: 20px;
+    font-size: 18px;
+}
+
+.landscape-tip.hidden {
+    display: none;
+}
+
+/* 顶部操作按钮容器 */
+.control-buttons {
+    margin: 20px 0;
+    display: flex;
+    gap: 15px;
+    z-index: 50;
+}
+
+.control-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: #0071e3;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.control-btn:hover {
+    background-color: #0077ed;
+}
+
+/* 核心容器（标尺+表格）- 居中显示 */
+.core-container {
+    width: 100%;
+    max-width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 40px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px 0;
+    z-index: 10;
+    position: relative;
+}
+
+/* EV标尺（11列）- 固定宽度+绝对定位 */
+.ev-ruler {
+    display: flex;
+    height: 60px;
+    width: calc(11 * 60px); /* 保留11列 */
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    cursor: grab;
+    margin-bottom: 10px;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.ev-ruler:active {
+    cursor: grabbing;
+}
+
+.ev-column {
+    width: 60px;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #1d1d1f;
+    font-weight: 500;
+}
+
+/* 曝光表格（11列）- 固定宽度+相对定位 */
+.exposure-table {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 80px;
+    width: calc(11 * 60px); /* 保留11列 */
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+    z-index: 5;
+    margin-top: 70px;
+}
+
+.table-cell {
+    width: 60px;
+    height: 100%;
+    border: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 亚当斯区域曝光法 - EV颜色规范 */
+.ev-column.ev-neg5, .ev-column.ev-pos5 { background-color: #ff3b30; color: #fff; }
+.ev-column.ev-neg4, .ev-column.ev-pos4 { background-color: #007aff; color: #fff; }
+.ev-column.ev-neg3, .ev-column.ev-pos3 { background-color: #5ac8fa; color: #fff; }
+.ev-column.ev-neg2, .ev-column.ev-pos2 { background-color: #34c759; color: #fff; }
+.ev-column.ev-neg1, .ev-column.ev-pos1 { background-color: #34c759; color: #fff; }
+.ev-column.ev-0 { background-color: #d1d1d6; color: #1d1d1f; }
+
+/* 曝光卡片容器（和表格同宽11列，9个卡片居中） */
+.exposure-cards-container {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 10px;
+    justify-content: flex-start; /* 靠计算偏移实现居中，不依赖flex居中 */
+    width: calc(11 * 60px); /* 和表格同宽11列 */
+    margin: 20px auto 15px auto;
+    z-index: 20;
+    position: relative;
+    min-height: calc(78px + 20px);
+    overflow: hidden;
+}
+
+/* 重设卡片按钮容器 - 卡片下方居中 */
+.card-reset-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    z-index: 50;
+}
+
+/* 曝光卡片样式 */
+.exposure-card {
+    width: 58px;
+    height: 78px;
+    background-color: #fff;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 4px;
+    cursor: grab;
+    transition: all 0.1s ease-out;
+    position: absolute;
+    z-index: 20;
+}
+
+.exposure-card:active {
+    cursor: grabbing;
+}
+
+/* 卡片隐藏标号 */
+.card-label {
+    display: none;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 10px;
+    color: #999;
+}
+
+/* 卡片输入框 */
+.card-input {
+    width: 100%;
+    height: 28px;
+    margin-bottom: 2px;
+    padding: 2px 4px;
+    border: 1px solid #e0e0e0;
+    border-radius: 3px;
+    font-size: 12px;
+    line-height: 1;
+}
+
+/* 提示框 */
+.toast {
+    position: fixed;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    background-color: rgba(0,0,0,0.8);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 16px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 999;
+}
+
+.toast.show {
+    opacity: 1;
+}
+
+/* 横竖屏适配 */
+@media (orientation: portrait) {
+    .core-container, .control-buttons, .exposure-cards-container, .card-reset-container {
+        display: none;
+    }
+}
+
+@media (orientation: landscape) {
+    .landscape-tip {
+        display: none;
+    }
+    body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        justify-content: flex-start;
+        padding-top: calc(env(safe-area-inset-top) + 20px);
+    }
+    .ev-ruler, .exposure-table, .exposure-cards-container {
+        width: calc(11 * 60px) !important;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
