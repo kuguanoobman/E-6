@@ -377,7 +377,7 @@ function resetCardsContent() {
         input.placeholder = input.id.includes('area') ? '区域' : '快门';
     });
     showToast('所有卡片内容已清空');
-}
+} 
 
 // 提示框
 function showToast(message) {
