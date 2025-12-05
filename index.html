@@ -7,15 +7,11 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <!-- 横屏提示 -->
-    <div class="landscape-tip">
-        请将手机横屏使用以获得最佳体验
-    </div>
-
     <!-- 顶部操作按钮 -->
     <div class="control-buttons">
         <button class="control-btn" id="resetTable">重设表格</button>
         <button class="control-btn" id="resetRuler">恢复标尺默认位置</button>
+        <button class="control-btn control-btn-reset-cards" id="resetCards">重设卡片</button>
     </div>
 
     <!-- 核心容器（标尺+表格） -->
@@ -26,11 +22,6 @@
 
     <!-- 曝光卡片容器（和表格同宽11列） -->
     <div class="exposure-cards-container" id="exposureCardsContainer"></div>
-
-    <!-- 重设卡片按钮容器 -->
-    <div class="card-reset-container">
-        <button class="control-btn" id="resetCards">重设卡片</button>
-    </div>
 
     <!-- 提示框 -->
     <div class="toast" id="toast"></div>

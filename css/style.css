@@ -3,7 +3,6 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    touch-action: none;
 }
 
 body {
@@ -15,29 +14,6 @@ body {
     align-items: center;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     background-color: #f5f5f7;
-}
-
-/* 横屏提示 */
-.landscape-tip {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: #1d1d1f;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    text-align: center;
-    padding: 20px;
-    font-size: 18px;
-}
-
-.landscape-tip.hidden {
-    display: none;
 }
 
 /* 顶部操作按钮容器 */
@@ -63,6 +39,14 @@ body {
     background-color: #0077ed;
 }
 
+.control-btn-reset-cards {
+    background-color: #34c759;
+}
+
+.control-btn-reset-cards:hover {
+    background-color: #3dd66f;
+}
+
 /* 核心容器（标尺+表格）- 居中显示 */
 .core-container {
     width: 100%;
@@ -73,9 +57,10 @@ body {
     margin: 10px 0;
     z-index: 10;
     position: relative;
+    gap: 10px;
 }
 
-/* EV标尺（11列）- 固定宽度+绝对定位 */
+/* EV标尺（11列）- 相对定位，自然居中 */
 .ev-ruler {
     display: flex;
     height: 60px;
@@ -83,11 +68,9 @@ body {
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     cursor: grab;
-    margin-bottom: 10px;
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
+    margin: 0 auto 10px auto; /* 自动横向居中 */
+    position: relative;
+    touch-action: none;
 }
 
 .ev-ruler:active {
@@ -116,7 +99,6 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     position: relative;
     z-index: 5;
-    margin-top: 70px;
 }
 
 .table-cell {
@@ -140,16 +122,13 @@ body {
 
 /* 曝光卡片容器（和表格同宽11列，9个卡片居中） */
 .exposure-cards-container {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 10px;
-    justify-content: flex-start; /* 靠计算偏移实现居中，不依赖flex居中 */
     width: calc(11 * 60px); /* 和表格同宽11列 */
     margin: 20px auto 15px auto;
     z-index: 20;
     position: relative;
-    min-height: calc(78px + 20px);
-    overflow: hidden;
+    height: calc(78px + 20px);
+    overflow: visible;
+    touch-action: manipulation;
 }
 
 /* 重设卡片按钮容器 - 卡片下方居中 */
@@ -168,15 +147,42 @@ body {
     background-color: #fff;
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    padding: 4px;
+    padding: 0;
     cursor: grab;
-    transition: all 0.1s ease-out;
     position: absolute;
     z-index: 20;
+    touch-action: manipulation;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .exposure-card:active {
     cursor: grabbing;
+}
+
+/* 卡片拖动手柄 */
+.card-handle {
+    width: 100%;
+    height: 16px;
+    background: linear-gradient(135deg, #007aff, #34c759);
+    border-radius: 3px 3px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #fff;
+    font-weight: bold;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    margin-bottom: 3px;
+    flex-shrink: 0;
+}
+
+.card-handle:active {
+    cursor: grabbing;
+    background: linear-gradient(135deg, #0071e3, #30b745);
 }
 
 /* 卡片隐藏标号 */
@@ -191,14 +197,27 @@ body {
 
 /* 卡片输入框 */
 .card-input {
-    width: 100%;
-    height: 28px;
-    margin-bottom: 2px;
+    width: calc(100% - 8px);
+    height: 26px;
+    margin: 2px 4px;
     padding: 2px 4px;
     border: 1px solid #e0e0e0;
     border-radius: 3px;
     font-size: 12px;
     line-height: 1;
+    background-color: #fff;
+    color: #1d1d1f;
+    pointer-events: auto;
+    -webkit-appearance: none;
+    -webkit-user-select: text;
+    user-select: text;
+    flex: 1;
+}
+
+.card-input:focus {
+    outline: none;
+    border-color: #0071e3;
+    box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
 }
 
 /* 提示框 */
@@ -222,25 +241,78 @@ body {
 }
 
 /* 横竖屏适配 */
-@media (orientation: portrait) {
-    .core-container, .control-buttons, .exposure-cards-container, .card-reset-container {
-        display: none;
-    }
+/* 自适应布局 */
+body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    justify-content: flex-start;
+    padding-top: calc(env(safe-area-inset-top) + 20px);
 }
 
-@media (orientation: landscape) {
-    .landscape-tip {
-        display: none;
+.ev-ruler, .exposure-table, .exposure-cards-container {
+    width: calc(11 * 60px) !important;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* 横屏优化 - 减少间距以适应小屏 */
+@media (orientation: landscape) and (max-height: 500px) {
+    .control-buttons {
+        margin: 8px 0;
+        gap: 8px;
     }
-    body {
-        padding-left: env(safe-area-inset-left);
-        padding-right: env(safe-area-inset-right);
-        justify-content: flex-start;
-        padding-top: calc(env(safe-area-inset-top) + 20px);
+
+    .control-btn {
+        padding: 6px 12px;
+        font-size: 14px;
     }
-    .ev-ruler, .exposure-table, .exposure-cards-container {
-        width: calc(11 * 60px) !important;
-        margin-left: auto;
-        margin-right: auto;
+
+    .core-container {
+        margin: 5px 0;
+        gap: 5px;
+    }
+
+    .ev-ruler {
+        height: 50px;
+        margin: 0 auto 5px auto;
+    }
+
+    .ev-column {
+        width: 60px;
+        height: 100%;
+        font-size: 14px;
+    }
+
+    .exposure-table {
+        height: 70px;
+        margin-top: 0;
+    }
+
+    .table-cell {
+        width: 60px;
+        height: 100%;
+    }
+
+    .exposure-cards-container {
+        margin: 8px auto 8px auto;
+        min-height: calc(60px + 15px);
+    }
+
+    .exposure-card {
+        width: 50px;
+        height: 68px;
+    }
+
+    .card-handle {
+        height: 10px;
+        font-size: 10px;
+        margin-bottom: 2px;
+    }
+
+    .card-input {
+        height: 20px;
+        font-size: 11px;
+        margin: 1px 2px;
+        width: calc(100% - 4px);
     }
 }

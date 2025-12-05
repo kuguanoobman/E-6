@@ -16,6 +16,7 @@ const CENTER_OFFSET = (TABLE_TOTAL_WIDTH - CARDS_TOTAL_WIDTH) / 2; // 居中偏�
 // 卡片初始位置（基于居中偏移，整体中心与表格中心对齐）
 const CARD_INITIAL_POSITIONS = {};
 for (let i = 1; i <= CARD_COUNT; i++) {
+    // 计算卡片之间的间隙距离：每个卡片宽度 + 间隙
     CARD_INITIAL_POSITIONS[i] = {
         x: CENTER_OFFSET + (CARD_WIDTH + CARD_GAP) * (i - 1),
         y: 0
@@ -28,7 +29,6 @@ let startX = 0;
 let startTranslateX = 0;
 
 // DOM元素
-const landscapeTip = document.querySelector('.landscape-tip');
 const evRuler = document.getElementById('evRuler');
 const exposureTable = document.getElementById('exposureTable');
 const exposureCardsContainer = document.getElementById('exposureCardsContainer');
@@ -44,9 +44,19 @@ function init() {
     generateTableCells();
     generateEVRuler();
     generateExposureCards();
+    
+    // 调试：打印卡片初始位置
+    console.log('=== 卡片初始位置 ===');
+    console.log('CENTER_OFFSET:', CENTER_OFFSET);
+    console.log('TABLE_TOTAL_WIDTH:', TABLE_TOTAL_WIDTH);
+    console.log('CARDS_TOTAL_WIDTH:', CARDS_TOTAL_WIDTH);
+    for (let i = 1; i <= CARD_COUNT; i++) {
+        console.log(`卡片${i}: x=${CARD_INITIAL_POSITIONS[i].x}px, y=${CARD_INITIAL_POSITIONS[i].y}px`);
+    }
+    
     bindEvents();
-    checkOrientation();
     alignRulerToMiddle();
+    adjustViewportScale();
 }
 
 // 生成11个表格单元格
@@ -80,9 +90,11 @@ function generateExposureCards() {
         card.dataset.cardId = i;
         card.draggable = true;
         // 应用居中后的初始位置
+        card.style.position = 'absolute';
         card.style.left = `${CARD_INITIAL_POSITIONS[i].x}px`;
         card.style.top = `${CARD_INITIAL_POSITIONS[i].y}px`;
         card.innerHTML = `
+            <div class="card-handle">≡</div>
             <span class="card-label">${i}</span>
             <input type="text" class="card-input" placeholder="区域" id="areaInput-${i}">
             <input type="text" class="card-input" placeholder="快门" id="shutterInput-${i}">
@@ -93,14 +105,15 @@ function generateExposureCards() {
 
 // 绑定所有事件
 function bindEvents() {
-    // 横竖屏/窗口调整
+    // 窗口调整
     window.addEventListener('resize', throttle(() => {
-        checkOrientation();
         alignRulerToNearestCell();
+        adjustViewportScale();
     }, 200));
+
+    // 方向变化（横竖屏切换）
     window.addEventListener('orientationchange', throttle(() => {
-        checkOrientation();
-        alignRulerToNearestCell();
+        setTimeout(adjustViewportScale, 100); // 延迟以确保尺寸更新
     }, 200));
 
     // 标尺拖动
@@ -116,15 +129,6 @@ function bindEvents() {
         alignRulerToMiddle();
         showToast('标尺已恢复默认位置（0EV对齐中间列）');
     });
-}
-
-// 横竖屏检测
-function checkOrientation() {
-    if (window.matchMedia('(orientation: landscape)').matches) {
-        landscapeTip.classList.add('hidden');
-    } else {
-        landscapeTip.classList.remove('hidden');
-    }
 }
 
 // 标尺拖动逻辑
@@ -154,22 +158,29 @@ function bindRulerDrag() {
     });
 
     // 移动端触摸事件
-    evRuler.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        isDragging = true;
-        const touch = e.touches[0];
-        startX = touch.clientX;
-        startTranslateX = getCurrentTranslateX(evRuler);
-        evRuler.style.cursor = 'grabbing';
-    });
+        evRuler.addEventListener('touchstart', (e) => {
+            // Only start custom dragging for single-finger touches.
+            if (e.touches && e.touches.length === 1) {
+                e.preventDefault();
+                isDragging = true;
+                const touch = e.touches[0];
+                startX = touch.clientX;
+                startTranslateX = getCurrentTranslateX(evRuler);
+                evRuler.style.cursor = 'grabbing';
+            } else {
+                // For multi-touch (pinch) do not prevent default — allow pinch-zoom.
+                isDragging = false;
+            }
+        });
 
     document.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
-        e.preventDefault();
-        const touch = e.touches[0];
-        const deltaX = touch.clientX - startX;
-        evRuler.style.transform = `translateX(${startTranslateX + deltaX}px)`;
-    });
+            if (!isDragging) return;
+            // still single-touch dragging
+            e.preventDefault();
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - startX;
+            evRuler.style.transform = `translateX(${startTranslateX + deltaX}px)`;
+        });
 
     document.addEventListener('touchend', () => {
         if (!isDragging) return;
@@ -188,7 +199,7 @@ function bindRulerDrag() {
 // 获取元素当前translateX值
 function getCurrentTranslateX(el) {
     const transform = window.getComputedStyle(el).transform;
-    if (transform === 'none') return -50;
+    if (transform === 'none') return 0;
     const matrix = transform.split(',');
     const translateX = parseFloat(matrix[4] || 0);
     return translateX;
@@ -219,6 +230,7 @@ function alignRulerToMiddle() {
 // 卡片拖拽逻辑
 function bindCardDrag() {
     const cards = document.querySelectorAll('.exposure-card');
+    let activeCard = null; // 追踪当前被拖动的卡片
 
     // 桌面端拖拽
     cards.forEach(card => {
@@ -235,14 +247,27 @@ function bindCardDrag() {
 
         // 移动端触摸
         card.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            card.dataset.startX = touch.clientX;
-            card.dataset.startY = touch.clientY;
-            card.dataset.originalX = card.getBoundingClientRect().left;
-            card.dataset.originalY = card.getBoundingClientRect().top;
-            card.style.zIndex = 30;
-            card.style.opacity = '0.8';
+            // 检查是否点击了输入框，如果是则不启动拖拽
+            if (e.target.classList.contains('card-input')) {
+                return;
+            }
+
+            // Only treat single-finger touches as drag starts. Allow multi-touch (pinch) to proceed.
+            if (e.touches && e.touches.length === 1) {
+                e.preventDefault(); // 在卡片上立即阻止默认行为
+                activeCard = card;
+                const touch = e.touches[0];
+                
+                // 保存初始触摸位置和卡片位置
+                card.dataset.startX = touch.clientX;
+                card.dataset.startY = touch.clientY;
+                // 保存卡片的当前style.left和style.top值
+                card.dataset.initialLeft = parseFloat(card.style.left) || 0;
+                card.dataset.initialTop = parseFloat(card.style.top) || 0;
+                
+                card.style.zIndex = 30;
+                card.style.opacity = '0.8';
+            }
         });
     });
 
@@ -260,27 +285,49 @@ function bindCardDrag() {
 
     // 移动端触摸移动
     document.addEventListener('touchmove', (e) => {
-        const card = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY).closest('.exposure-card');
-        if (!card || !card.dataset.startX) return;
+        if (!activeCard || !activeCard.dataset.startX) return;
+
+        // 如果正在编辑输入框，不处理拖拽
+        if (e.target.closest('.card-input')) {
+            return;
+        }
+
+        // 在卡片上滑动，阻止页面滑动并移动卡片
         e.preventDefault();
         const touch = e.touches[0];
-        const deltaX = touch.clientX - parseInt(card.dataset.startX);
-        const deltaY = touch.clientY - parseInt(card.dataset.startY);
-        card.style.left = `${parseInt(card.dataset.originalX) + deltaX}px`;
-        card.style.top = `${parseInt(card.dataset.originalY) + deltaY}px`;
-    });
+        const deltaX = touch.clientX - parseInt(activeCard.dataset.startX);
+        const deltaY = touch.clientY - parseInt(activeCard.dataset.startY);
+        
+        const newLeft = parseInt(activeCard.dataset.initialLeft) + deltaX;
+        const newTop = parseInt(activeCard.dataset.initialTop) + deltaY;
+        
+        activeCard.style.left = `${newLeft}px`;
+        activeCard.style.top = `${newTop}px`;
+    }, { passive: false });
 
     // 移动端触摸结束
     document.addEventListener('touchend', (e) => {
+        if (!activeCard) return;
+
         const touch = e.changedTouches[0];
-        const card = document.elementFromPoint(touch.clientX, touch.clientY).closest('.exposure-card');
-        if (!card) return;
-        const targetCell = document.elementFromPoint(touch.clientX, touch.clientY).closest('.table-cell');
-        handleCardDrop(card, targetCell);
-        card.style.zIndex = 20;
-        card.style.opacity = '1';
-        delete card.dataset.startX;
-        delete card.dataset.startY;
+        
+        // 临时隐藏卡片，以便获取其下方的元素
+        activeCard.style.visibility = 'hidden';
+        // 获取触摸位置的元素
+        const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+        // 恢复卡片可见性
+        activeCard.style.visibility = 'visible';
+        
+        const targetCell = targetElement.closest('.table-cell');
+        
+        handleCardDrop(activeCard, targetCell);
+        activeCard.style.zIndex = 20;
+        activeCard.style.opacity = '1';
+        delete activeCard.dataset.startX;
+        delete activeCard.dataset.startY;
+        delete activeCard.dataset.initialLeft;
+        delete activeCard.dataset.initialTop;
+        activeCard = null;
     });
 }
 
@@ -350,4 +397,39 @@ function throttle(fn, delay) {
             }, delay);
         }
     };
+}
+
+// 动态调整视口缩放，使内容在横屏时合适显示
+function adjustViewportScale() {
+    const viewportMeta = document.querySelector('meta[name="viewport"]');
+    if (!viewportMeta) return;
+
+    // 检测是否为移动设备
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (!isMobile) return;
+
+    // 横竖屏判定
+    const isLandscape = window.innerWidth > window.innerHeight;
+
+    if (isLandscape) {
+        // 横屏：计算合适的缩放比例
+        const pageHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        
+        // 如果内容高度超过窗口高度，计算缩放比例
+        if (pageHeight > windowHeight) {
+            const scale = Math.max(0.6, windowHeight / pageHeight);
+            // 动态更新 viewport 的 initial-scale
+            viewportMeta.setAttribute('content', 
+                `width=device-width, initial-scale=${scale.toFixed(2)}, viewport-fit=cover`);
+        } else {
+            // 内容能完全显示，恢复默认缩放
+            viewportMeta.setAttribute('content', 
+                'width=device-width, initial-scale=1.0, viewport-fit=cover');
+        }
+    } else {
+        // 竖屏：恢复默认缩放
+        viewportMeta.setAttribute('content', 
+            'width=device-width, initial-scale=1.0, viewport-fit=cover');
+    }
 }

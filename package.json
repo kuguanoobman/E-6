@@ -1,0 +1,21 @@
+{
+  "name": "exposure-ruler-tool",
+  "version": "1.0.0",
+  "description": "曝光标尺工具（亚当斯区域曝光法）- 横屏交互工具",
+  "main": "index.html",
+  "scripts": {
+    "dev": "live-server --port=8000 --host=0.0.0.0 --watch=index.html,css,js",
+    "start": "live-server --port=8000 --host=0.0.0.0"
+  },
+  "keywords": [
+    "exposure",
+    "ruler",
+    "adams",
+    "zone-system"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
